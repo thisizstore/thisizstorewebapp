@@ -29,8 +29,13 @@ const games = [
   { name: 'Clash of Clans', image: '/game-icons/clash-of-clans.png' },
 ];
 
-const ICON_SIZE = 70;
-const COLLISION_PADDING = 20;
+const COLLISION_PADDING = 15;
+
+// Get responsive icon size based on screen width
+const getIconSize = () => {
+  if (typeof window === 'undefined') return 70;
+  return window.innerWidth < 640 ? 50 : 70;
+};
 
 interface GameIcon {
   id: number;
@@ -48,21 +53,33 @@ export function Home({ onNavigate }: { onNavigate: (page: string) => void }) {
   const [draggingId, setDraggingId] = useState<number | null>(null);
   const [offset, setOffset] = useState({ x: 0, y: 0 });
   const [isHovering, setIsHovering] = useState<number | null>(null);
+  const [iconSize, setIconSize] = useState(getIconSize());
   const containerRef = useRef<HTMLDivElement>(null);
 
-  // Check if two icons would collide
-  const wouldCollide = useCallback((x1: number, y1: number, x2: number, y2: number) => {
-    const distance = Math.sqrt(Math.pow(x2 - x1, 2) + Math.pow(y2 - y1, 2));
-    return distance < ICON_SIZE + COLLISION_PADDING;
+  // Update icon size on resize
+  useEffect(() => {
+    const handleResize = () => {
+      setIconSize(getIconSize());
+    };
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
   }, []);
 
-  // Check if position is in center zone (where text/buttons are)
-  const isInCenterZone = useCallback((x: number, y: number, containerWidth: number, containerHeight: number) => {
+  // Check if two icons would collide
+  const wouldCollide = useCallback((x1: number, y1: number, x2: number, y2: number, currentIconSize: number) => {
+    const distance = Math.sqrt(Math.pow(x2 - x1, 2) + Math.pow(y2 - y1, 2));
+    return distance < currentIconSize + COLLISION_PADDING;
+  }, []);
+
+  // Check if position is in center zone (where text/buttons are) - larger zone on mobile
+  const isInCenterZone = useCallback((x: number, y: number, containerWidth: number, containerHeight: number, currentIconSize: number) => {
     const centerX = containerWidth / 2;
     const centerY = containerHeight / 2;
-    const zoneWidth = 280;
-    const zoneHeight = 200;
-    return Math.abs(x + ICON_SIZE / 2 - centerX) < zoneWidth / 2 && Math.abs(y + ICON_SIZE / 2 - centerY) < zoneHeight / 2;
+    // Larger protection zone on mobile to prevent icon overlap with text
+    const isMobile = containerWidth < 640;
+    const zoneWidth = isMobile ? containerWidth * 0.85 : 280;
+    const zoneHeight = isMobile ? 280 : 200;
+    return Math.abs(x + currentIconSize / 2 - centerX) < zoneWidth / 2 && Math.abs(y + currentIconSize / 2 - centerY) < zoneHeight / 2;
   }, []);
 
   // Find valid position that doesn't collide with other icons
@@ -72,20 +89,21 @@ export function Home({ onNavigate }: { onNavigate: (page: string) => void }) {
     currentId: number,
     icons: GameIcon[],
     containerWidth: number,
-    containerHeight: number
+    containerHeight: number,
+    currentIconSize: number
   ): { x: number, y: number } => {
     for (const icon of icons) {
       if (icon.id === currentId) continue;
 
-      if (wouldCollide(targetX, targetY, icon.x, icon.y)) {
+      if (wouldCollide(targetX, targetY, icon.x, icon.y, currentIconSize)) {
         const angle = Math.atan2(targetY - icon.y, targetX - icon.x);
-        const pushDistance = ICON_SIZE + COLLISION_PADDING + 5;
+        const pushDistance = currentIconSize + COLLISION_PADDING + 5;
 
         let newX = icon.x + Math.cos(angle) * pushDistance;
         let newY = icon.y + Math.sin(angle) * pushDistance;
 
-        newX = Math.max(10, Math.min(newX, containerWidth - ICON_SIZE - 10));
-        newY = Math.max(10, Math.min(newY, containerHeight - ICON_SIZE - 10));
+        newX = Math.max(10, Math.min(newX, containerWidth - currentIconSize - 10));
+        newY = Math.max(10, Math.min(newY, containerHeight - currentIconSize - 10));
 
         return { x: newX, y: newY };
       }
@@ -100,9 +118,23 @@ export function Home({ onNavigate }: { onNavigate: (page: string) => void }) {
       const rect = containerRef.current.getBoundingClientRect();
       const w = rect.width;
       const h = rect.height;
+      const isMobile = w < 640;
+      const currentIconSize = isMobile ? 50 : 70;
 
-      // Safe positions around edges, avoiding center text area
-      const safePositions = [
+      // Safe positions around edges - different for mobile vs desktop
+      // On mobile, icons are placed in corners and edges only to avoid center text
+      const safePositions = isMobile ? [
+        // Mobile: 4 corners and 4 edge positions
+        { x: 10, y: 30, rotation: -8 },   // Top-left
+        { x: w - currentIconSize - 10, y: 30, rotation: 6 },    // Top-right
+        { x: 10, y: h - currentIconSize - 100, rotation: -5 },  // Bottom-left (above buttons)
+        { x: w - currentIconSize - 10, y: h - currentIconSize - 100, rotation: 10 }, // Bottom-right (above buttons)
+        { x: 10, y: h - currentIconSize - 30, rotation: 8 },    // Far bottom-left
+        { x: w - currentIconSize - 10, y: h - currentIconSize - 30, rotation: -6 }, // Far bottom-right
+        { x: w / 2 - currentIconSize - 50, y: 30, rotation: 4 },  // Top-center-left
+        { x: w / 2 + 50, y: h - currentIconSize - 30, rotation: -10 },  // Bottom-center-right
+      ] : [
+        // Desktop: wider spread positions
         { x: 40, y: 50, rotation: -8 },
         { x: w - 120, y: 40, rotation: 6 },
         { x: 30, y: h / 2 - 40, rotation: -5 },
@@ -118,16 +150,16 @@ export function Home({ onNavigate }: { onNavigate: (page: string) => void }) {
       games.forEach((game, index) => {
         const pos = safePositions[index] || { x: 100, y: 100, rotation: 0 };
 
-        let finalX = Math.max(10, Math.min(pos.x, w - ICON_SIZE - 10));
-        let finalY = Math.max(10, Math.min(pos.y, h - ICON_SIZE - 10));
+        let finalX = Math.max(10, Math.min(pos.x, w - currentIconSize - 10));
+        let finalY = Math.max(10, Math.min(pos.y, h - currentIconSize - 10));
 
         // Ensure no collision with existing icons
         for (const existing of newIcons) {
-          if (wouldCollide(finalX, finalY, existing.x, existing.y)) {
-            finalX = finalX + ICON_SIZE + COLLISION_PADDING;
-            if (finalX > w - ICON_SIZE - 10) {
-              finalX = 50;
-              finalY = finalY + ICON_SIZE + COLLISION_PADDING;
+          if (wouldCollide(finalX, finalY, existing.x, existing.y, currentIconSize)) {
+            finalX = finalX + currentIconSize + COLLISION_PADDING;
+            if (finalX > w - currentIconSize - 10) {
+              finalX = 10;
+              finalY = finalY + currentIconSize + COLLISION_PADDING;
             }
           }
         }
@@ -194,11 +226,11 @@ export function Home({ onNavigate }: { onNavigate: (page: string) => void }) {
       let targetX = e.clientX - rect.left - offset.x;
       let targetY = e.clientY - rect.top - offset.y;
 
-      targetX = Math.max(0, Math.min(targetX, rect.width - ICON_SIZE));
-      targetY = Math.max(0, Math.min(targetY, rect.height - ICON_SIZE));
+      targetX = Math.max(0, Math.min(targetX, rect.width - iconSize));
+      targetY = Math.max(0, Math.min(targetY, rect.height - iconSize));
 
       // Check for collisions and find valid position
-      const validPos = findValidPosition(targetX, targetY, draggingId, gameIcons, rect.width, rect.height);
+      const validPos = findValidPosition(targetX, targetY, draggingId, gameIcons, rect.width, rect.height, iconSize);
 
       setGameIcons(prev =>
         prev.map(icon =>
@@ -215,10 +247,10 @@ export function Home({ onNavigate }: { onNavigate: (page: string) => void }) {
       let targetX = touch.clientX - rect.left - offset.x;
       let targetY = touch.clientY - rect.top - offset.y;
 
-      targetX = Math.max(0, Math.min(targetX, rect.width - ICON_SIZE));
-      targetY = Math.max(0, Math.min(targetY, rect.height - ICON_SIZE));
+      targetX = Math.max(0, Math.min(targetX, rect.width - iconSize));
+      targetY = Math.max(0, Math.min(targetY, rect.height - iconSize));
 
-      const validPos = findValidPosition(targetX, targetY, draggingId, gameIcons, rect.width, rect.height);
+      const validPos = findValidPosition(targetX, targetY, draggingId, gameIcons, rect.width, rect.height, iconSize);
 
       setGameIcons(prev =>
         prev.map(icon =>
@@ -235,7 +267,7 @@ export function Home({ onNavigate }: { onNavigate: (page: string) => void }) {
 
       if (icon) {
         // Check if dropped in center zone -> drop z-index to behind text
-        const isInCenter = isInCenterZone(icon.x, icon.y, rect.width, rect.height);
+        const isInCenter = isInCenterZone(icon.x, icon.y, rect.width, rect.height, iconSize);
         const newZIndex = isInCenter ? 1 : 10;
 
         setGameIcons(prev => prev.map(i =>
@@ -299,8 +331,8 @@ export function Home({ onNavigate }: { onNavigate: (page: string) => void }) {
                 style={{
                   left: `${icon.x}px`,
                   top: `${icon.y}px`,
-                  width: `${ICON_SIZE}px`,
-                  height: `${ICON_SIZE}px`,
+                  width: `${iconSize}px`,
+                  height: `${iconSize}px`,
                   zIndex: icon.isDragging ? 1000 : icon.zIndex,
                   transform: `rotate(${icon.rotation}deg) scale(${isHovering === icon.id && !icon.isDragging ? 1.15 : 1})`,
                   transition: icon.isDragging ? 'transform 0.1s' : 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
