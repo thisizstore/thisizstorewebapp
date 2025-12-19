@@ -19,7 +19,7 @@ export function JasaCari() {
   const { user, profile } = useAuth();
   const { games } = useGames();
   const [formData, setFormData] = useState<FormData>({
-    requester_name: profile?.phone_number || '',
+    requester_name: profile?.username || '',
     game_id: '',
     price_min: '',
     price_max: '',
@@ -45,11 +45,11 @@ export function JasaCari() {
     ? games.filter((game) => game.name.toLowerCase().includes(gameSearch.toLowerCase()))
     : [];
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSubmit = async () => {
     setLoading(true);
 
     try {
+      // Validasi input form (login TIDAK wajib - bisa anonymous)
       if (!formData.requester_name.trim()) {
         throw new Error('Nama harus diisi');
       }
@@ -72,6 +72,7 @@ export function JasaCari() {
         throw new Error('Spesifikasi akun minimal 5 kata');
       }
 
+      // Insert dengan user_id opsional (null jika anonymous)
       const { error } = await supabase.from('jasa_cari').insert({
         code: code,
         requester_name: formData.requester_name,
@@ -80,7 +81,7 @@ export function JasaCari() {
         price_max: parseInt(formData.price_max),
         phone_number: formData.phone_number,
         account_spec: formData.account_spec,
-        user_id: user?.id || '00000000-0000-0000-0000-000000000000',
+        user_id: user?.id || null, // Opsional: null jika user tidak login
         is_approved: false,
       });
 
@@ -93,7 +94,7 @@ export function JasaCari() {
       setTimeout(() => {
         setShowSuccess(false);
         setFormData({
-          requester_name: profile?.phone_number || '',
+          requester_name: profile?.username || '',
           game_id: '',
           price_min: '',
           price_max: '',
@@ -123,7 +124,7 @@ export function JasaCari() {
           Cari akun game yang Anda inginkan dengan harga terjangkau
         </p>
 
-        <form onSubmit={handleSubmit} className="space-y-6">
+        <div className="space-y-6">
           {/* Requester Name */}
           <div>
             <label className="block text-sm font-semibold text-slate-300 mb-2">
@@ -283,21 +284,20 @@ export function JasaCari() {
 
           {/* Submit Button */}
           <button
-            type="submit"
+            onClick={handleSubmit}
             disabled={loading}
             className="w-full py-3 bg-cyan-600 hover:bg-cyan-500 disabled:opacity-50 disabled:cursor-not-allowed text-white font-semibold rounded-lg transition-all duration-200 text-sm"
           >
             {loading ? 'Membuat...' : 'Buat Pencarian'}
           </button>
-        </form>
+        </div>
       </div>
 
       {/* Success Modal */}
       {showSuccess && (
         <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className={`bg-slate-900 border rounded-lg p-8 text-center max-w-sm ${
-            successType === 'success' ? 'border-green-500/30' : 'border-red-500/30'
-          }`}>
+          <div className={`bg-slate-900 border rounded-lg p-8 text-center max-w-sm ${successType === 'success' ? 'border-green-500/30' : 'border-red-500/30'
+            }`}>
             {successType === 'success' ? (
               <>
                 <Check className="w-16 h-16 text-green-400 mx-auto mb-4" />

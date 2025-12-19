@@ -27,12 +27,23 @@ export function AuthModal({ isOpen, onClose, initialMode = 'login' }: AuthModalP
     confirmPassword: '',
   });
 
+  // Set mode sesuai initialMode ketika modal dibuka
   useEffect(() => {
     if (isOpen) {
+      setMode(initialMode);
       setCaptcha(generateCaptcha());
       setCaptchaInput('');
+      setMessage('');
+      setFormData({ username: '', phone: '', password: '', confirmPassword: '' });
     }
-  }, [isOpen, mode]);
+  }, [isOpen, initialMode]);
+
+  // Reset captcha ketika mode berubah
+  useEffect(() => {
+    setCaptcha(generateCaptcha());
+    setCaptchaInput('');
+    setMessage('');
+  }, [mode]);
 
   if (!isOpen) return null;
 
@@ -77,9 +88,11 @@ export function AuthModal({ isOpen, onClose, initialMode = 'login' }: AuthModalP
           setTimeout(() => {
             setMode('login');
             setFormData({ username: '', phone: '', password: '', confirmPassword: '' });
+            setCaptcha(generateCaptcha());
+            setCaptchaInput('');
           }, 2000);
         } else {
-          throw result.error;
+          throw result.error || new Error('Sign up gagal');
         }
       } else {
         if (!formData.username) {
@@ -89,17 +102,22 @@ export function AuthModal({ isOpen, onClose, initialMode = 'login' }: AuthModalP
           throw new Error('Password harus diisi');
         }
 
+        console.log('[AuthModal] Attempting login with:', formData.username);
         const result = await signIn(formData.username, formData.password);
 
         if (result.success) {
+          console.log('[AuthModal] Login success');
           setMessageType('success');
           setMessage('Login berhasil!');
           setTimeout(() => {
+            console.log('[AuthModal] Closing modal');
             onClose();
             setFormData({ username: '', phone: '', password: '', confirmPassword: '' });
-          }, 1000);
+            setCaptcha(generateCaptcha());
+            setCaptchaInput('');
+          }, 1500); // Increased timeout to allow state updates
         } else {
-          throw result.error;
+          throw result.error || new Error('Login gagal');
         }
       }
     } catch (error: any) {
@@ -247,7 +265,7 @@ export function AuthModal({ isOpen, onClose, initialMode = 'login' }: AuthModalP
             <button
               type="submit"
               disabled={loading}
-              className="w-full py-2.5 bg-gradient-to-r from-cyan-600 to-cyan-500 hover:from-cyan-500 hover:to-cyan-400 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold rounded-lg transition-all duration-200 text-sm"
+              className="w-full py-2.5 bg-gradient-to-r from-cyan-600 to-cyan-500 hover:from-cyan-500 hover:to-cyan-400 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold rounded-lg transition-all duration-200 text-sm cursor-pointer active:from-cyan-400 active:to-cyan-300"
             >
               {loading ? 'Loading...' : mode === 'login' ? 'Login' : 'Sign Up'}
             </button>
@@ -262,8 +280,6 @@ export function AuthModal({ isOpen, onClose, initialMode = 'login' }: AuthModalP
                 onClick={() => {
                   setMode(mode === 'login' ? 'signup' : 'login');
                   setMessage('');
-                  setCaptcha(generateCaptcha());
-                  setCaptchaInput('');
                   setFormData({ username: '', phone: '', password: '', confirmPassword: '' });
                 }}
                 className="text-cyan-400 hover:text-cyan-300 font-semibold transition-colors"

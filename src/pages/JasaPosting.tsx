@@ -20,7 +20,7 @@ export function JasaPosting() {
   const { user, profile } = useAuth();
   const { games } = useGames();
   const [formData, setFormData] = useState<FormData>({
-    owner_name: profile?.phone_number || '',
+    owner_name: profile?.username || '',
     game_id: '',
     price: '',
     phone_number: profile?.phone_number || '',
@@ -76,11 +76,11 @@ export function JasaPosting() {
     setFormData({ ...formData, photos: newPhotos });
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSubmit = async () => {
     setLoading(true);
 
     try {
+      // Validasi input form (login TIDAK wajib - bisa anonymous)
       if (!formData.owner_name.trim()) {
         throw new Error('Nama pemilik akun harus diisi');
       }
@@ -100,6 +100,7 @@ export function JasaPosting() {
         throw new Error('Minimal 1 foto akun harus diupload');
       }
 
+      // Insert dengan user_id opsional (null jika anonymous)
       const { error } = await supabase.from('jasa_posting').insert({
         code: code,
         owner_name: formData.owner_name,
@@ -109,7 +110,7 @@ export function JasaPosting() {
         is_safe: formData.is_safe,
         additional_spec: formData.additional_spec || null,
         photos: formData.photos,
-        user_id: user?.id || '00000000-0000-0000-0000-000000000000',
+        user_id: user?.id || null, // Opsional: null jika user tidak login
         is_approved: false,
       });
 
@@ -122,7 +123,7 @@ export function JasaPosting() {
       setTimeout(() => {
         setShowSuccess(false);
         setFormData({
-          owner_name: profile?.phone_number || '',
+          owner_name: profile?.username || '',
           game_id: '',
           price: '',
           phone_number: profile?.phone_number || '',
@@ -153,7 +154,7 @@ export function JasaPosting() {
           Posting akun game Anda dan mulai dapatkan pembeli
         </p>
 
-        <form onSubmit={handleSubmit} className="space-y-6">
+        <div className="space-y-6">
           {/* Owner Name */}
           <div>
             <label className="block text-sm font-semibold text-slate-300 mb-2">
@@ -376,21 +377,20 @@ export function JasaPosting() {
 
           {/* Submit Button */}
           <button
-            type="submit"
+            onClick={handleSubmit}
             disabled={loading}
             className="w-full py-3 bg-cyan-600 hover:bg-cyan-500 disabled:opacity-50 disabled:cursor-not-allowed text-white font-semibold rounded-lg transition-all duration-200 text-sm"
           >
             {loading ? 'Posting...' : 'Post Akun'}
           </button>
-        </form>
+        </div>
       </div>
 
       {/* Success Modal */}
       {showSuccess && (
         <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className={`bg-slate-900 border rounded-lg p-8 text-center max-w-sm ${
-            successType === 'success' ? 'border-green-500/30' : 'border-red-500/30'
-          }`}>
+          <div className={`bg-slate-900 border rounded-lg p-8 text-center max-w-sm ${successType === 'success' ? 'border-green-500/30' : 'border-red-500/30'
+            }`}>
             {successType === 'success' ? (
               <>
                 <Check className="w-16 h-16 text-green-400 mx-auto mb-4" />
