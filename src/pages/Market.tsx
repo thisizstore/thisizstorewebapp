@@ -2,7 +2,8 @@ import { useState, useEffect, useMemo } from 'react';
 
 import { JasaPosting, JasaCari } from '../types';
 import { formatCurrency } from '../utils/validation';
-import { Eye, MessageSquare, ChevronLeft, ChevronRight, Search, Filter, X, ShoppingBag, Users, Sparkles } from 'lucide-react';
+import { Eye, MessageSquare, ChevronLeft, ChevronRight, Search, Filter, X, ShoppingBag, Users, Sparkles, Maximize2 } from 'lucide-react';
+
 import { useDataStore } from '../hooks/useDataStore';
 
 type TabType = 'posting' | 'cari';
@@ -24,6 +25,7 @@ export function Market() {
     data: null,
   });
   const [currentPhotoIndex, setCurrentPhotoIndex] = useState(0);
+  const [previewPhoto, setPreviewPhoto] = useState<string | null>(null);
 
   // Search and Filter
   const [searchQuery, setSearchQuery] = useState('');
@@ -99,9 +101,11 @@ export function Market() {
     setCurrentPhotoIndex(0);
   };
 
-  const getWhatsAppUrl = (code: string) => {
-    const message = `Minat+${code}`;
-    return `https://wa.me/6283136224221?text=${message}`;
+  const getWhatsAppUrl = (code: string, type: 'posting' | 'cari') => {
+    const message = type === 'cari'
+      ? `Mau Nawarin Akun ${code}`
+      : `Minat Beli Akun ${code}`;
+    return `https://wa.me/6283136224221?text=${encodeURIComponent(message)}`;
   };
 
   return (
@@ -394,40 +398,56 @@ export function Market() {
                   {/* Photos Carousel */}
                   {detail.data.photos && detail.data.photos.length > 0 && (
                     <div className="space-y-4">
-                      <div className="relative bg-slate-800 rounded-xl overflow-hidden h-72">
+                      <div className="relative bg-slate-800 rounded-xl overflow-hidden h-72 group/image">
                         <img
                           src={detail.data.photos[currentPhotoIndex]}
                           alt={`Photo ${currentPhotoIndex + 1}`}
-                          className="w-full h-full object-cover"
+                          className="w-full h-full object-cover cursor-pointer"
+                          onClick={() => setPreviewPhoto((detail.data as JasaPosting).photos[currentPhotoIndex])}
                         />
+
+                        {/* Preview Indicator */}
+                        <div className="absolute top-3 right-3 opacity-0 group-hover/image:opacity-100 transition-opacity">
+                          <button
+                            onClick={() => setPreviewPhoto((detail.data as JasaPosting).photos[currentPhotoIndex])}
+                            className="p-2 bg-black/60 hover:bg-black/80 rounded-lg text-white backdrop-blur-sm"
+                          >
+                            <Maximize2 className="w-5 h-5" />
+                          </button>
+                        </div>
 
                         {detail.data.photos.length > 1 && (
                           <>
                             <button
-                              onClick={() =>
+                              onClick={(e) => {
+                                e.stopPropagation();
                                 setCurrentPhotoIndex((prev) =>
-                                  prev === 0 ? detail.data.photos.length - 1 : prev - 1
-                                )
-                              }
+                                  prev === 0 ? (detail.data as JasaPosting).photos.length - 1 : prev - 1
+                                );
+                              }}
                               className="absolute left-3 top-1/2 -translate-y-1/2 p-2 bg-black/60 hover:bg-black/80 rounded-xl text-white backdrop-blur-sm transition-all"
                             >
                               <ChevronLeft className="w-5 h-5" />
                             </button>
                             <button
-                              onClick={() =>
+                              onClick={(e) => {
+                                e.stopPropagation();
                                 setCurrentPhotoIndex((prev) =>
-                                  prev === detail.data.photos.length - 1 ? 0 : prev + 1
-                                )
-                              }
+                                  prev === (detail.data as JasaPosting).photos.length - 1 ? 0 : prev + 1
+                                );
+                              }}
                               className="absolute right-3 top-1/2 -translate-y-1/2 p-2 bg-black/60 hover:bg-black/80 rounded-xl text-white backdrop-blur-sm transition-all"
                             >
                               <ChevronRight className="w-5 h-5" />
                             </button>
                             <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex gap-2">
-                              {detail.data.photos.map((_, idx) => (
+                              {(detail.data as JasaPosting).photos.map((_, idx) => (
                                 <button
                                   key={idx}
-                                  onClick={() => setCurrentPhotoIndex(idx)}
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setCurrentPhotoIndex(idx);
+                                  }}
                                   className={`h-2 rounded-full transition-all ${idx === currentPhotoIndex
                                     ? 'w-8 bg-cyan-400'
                                     : 'w-2 bg-white/50 hover:bg-white/70'
@@ -475,7 +495,7 @@ export function Market() {
 
                   {/* CTA Button */}
                   <a
-                    href={getWhatsAppUrl(detail.data.code)}
+                    href={getWhatsAppUrl(detail.data.code, 'posting')}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="w-full py-4 bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-400 hover:to-emerald-400 text-white font-bold rounded-xl transition-all duration-300 flex items-center justify-center gap-3 shadow-lg shadow-green-500/30 hover:shadow-green-500/50"
@@ -516,7 +536,7 @@ export function Market() {
 
                   {/* CTA Button */}
                   <a
-                    href={getWhatsAppUrl(detail.data.code)}
+                    href={getWhatsAppUrl(detail.data.code, 'cari')}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="w-full py-4 bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-400 hover:to-emerald-400 text-white font-bold rounded-xl transition-all duration-300 flex items-center justify-center gap-3 shadow-lg shadow-green-500/30 hover:shadow-green-500/50"
@@ -527,6 +547,31 @@ export function Market() {
                 </>
               )}
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Fullscreen Photo Preview */}
+      {previewPhoto && (
+        <div
+          onClick={() => setPreviewPhoto(null)}
+          className="fixed inset-0 bg-black/95 z-[60] flex items-center justify-center p-4 backdrop-blur-sm animate-in fade-in duration-200"
+        >
+          <div
+            className="relative max-w-7xl w-full max-h-screen flex items-center justify-center animate-in zoom-in-95 duration-200"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <img
+              src={previewPhoto}
+              alt="Fullscreen Preview"
+              className="max-w-full max-h-[90vh] object-contain rounded-lg shadow-2xl"
+            />
+            <button
+              onClick={() => setPreviewPhoto(null)}
+              className="absolute top-4 right-4 p-3 bg-white/10 hover:bg-white/20 rounded-full text-white transition-all backdrop-blur-md"
+            >
+              <X className="w-6 h-6" />
+            </button>
           </div>
         </div>
       )}
