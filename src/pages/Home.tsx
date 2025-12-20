@@ -11,11 +11,11 @@ interface Testimonial {
 }
 
 const testimonials: Testimonial[] = [
-  { author: 'Ahmad Fajri', text: 'Transaksi lancar dan aman. Akun original, sesuai deskripsi.', rating: 5 },
-  { author: 'Budi Santoso', text: 'Admin sangat responsif dan membantu. Proses verifikasi mudah.', rating: 5 },
-  { author: 'Siti Nurhaliza', text: 'Harga sangat kompetitif dibanding tempat lain.', rating: 5 },
-  { author: 'Eka Wijaya', text: 'Daftar akun cepat dan pembayaran fleksibel.', rating: 5 },
-  { author: 'Randi Pratama', text: 'Akun aman dan tidak ada masalah hingga sekarang.', rating: 5 },
+  { author: 'Dandy Purwadinata (Youtuber)', text: 'Ayo yang mau beli akun langsung aja ke this.iz.store', rating: 5 },
+  { author: 'Fahmi (Papua)', text: 'Admin sangat membantu, saya sering beli akun disini bonus jasa pengamanan dari admin', rating: 5 },
+  { author: 'Moreno (Papua)', text: 'Gacor kang', rating: 5 },
+  { author: 'Rafka (DIY)', text: 'Akun apa aja ada, Admin aman', rating: 5 },
+  { author: 'Arlentha (Solo)', text: 'Bantu Jualin akun paling jago ni admin', rating: 5 },
 ];
 
 const games = [
@@ -29,7 +29,7 @@ const games = [
   { name: 'Clash of Clans', image: '/game-icons/clash-of-clans.png' },
 ];
 
-const COLLISION_PADDING = 15;
+const COLLISION_PADDING = 40;
 
 // Get responsive icon size based on screen width
 const getIconSize = () => {
@@ -42,6 +42,9 @@ interface GameIcon {
   game: typeof games[0];
   x: number;
   y: number;
+  anchorX: number;
+  anchorY: number;
+  phase: number;
   rotation: number;
   isDragging: boolean;
   zIndex: number;
@@ -169,6 +172,9 @@ export function Home({ onNavigate }: { onNavigate: (page: string) => void }) {
           game,
           x: finalX,
           y: finalY,
+          anchorX: finalX,
+          anchorY: finalY,
+          phase: Math.random() > 0.5 ? 0 : Math.PI,
           rotation: pos.rotation,
           isDragging: false,
           zIndex: 10 + index,
@@ -178,6 +184,53 @@ export function Home({ onNavigate }: { onNavigate: (page: string) => void }) {
       setGameIcons(newIcons);
     }
   }, [wouldCollide]);
+
+  // Animation Loop - Strict Horizontal Oscillation (Left -> Center -> Right -> Center)
+  useEffect(() => {
+    let animationFrameId: number;
+    let time = 0;
+
+    const animate = () => {
+      // Speed "pelan pelan" -> 0.02 is a good slow speed
+      time += 0.02;
+
+      setGameIcons(prevIcons => {
+        return prevIcons.map(icon => {
+          if (icon.isDragging) return icon;
+
+          // Ensure anchor/phase exist (fallback for hot-reload)
+          const anchorX = icon.anchorX ?? (icon.x || 0);
+          const anchorY = icon.anchorY ?? (icon.y || 0);
+
+          // User: "Pergerakan pertama icon ke kiri" (First move to left)
+          // sin(t) for small t > 0 is positive.
+          // To move left (negative x) first, we use: x = anchor - sin(t).
+          const phase = icon.phase ?? 0;
+
+          // Oscillation Parameters
+          const ampX = 12; // Jarak kecil (Small distance)
+
+          // Calculate new position
+          const newX = anchorX - Math.sin(time + phase) * ampX;
+          const newY = anchorY; // Strict horizontal, no Y movement
+
+          return {
+            ...icon,
+            x: newX,
+            y: newY,
+            anchorX,
+            anchorY,
+            phase,
+          };
+        });
+      });
+
+      animationFrameId = requestAnimationFrame(animate);
+    };
+
+    animationFrameId = requestAnimationFrame(animate);
+    return () => cancelAnimationFrame(animationFrameId);
+  }, []);
 
   const handleMouseDown = (id: number, e: React.MouseEvent) => {
     e.preventDefault();
@@ -272,7 +325,7 @@ export function Home({ onNavigate }: { onNavigate: (page: string) => void }) {
 
         setGameIcons(prev => prev.map(i =>
           i.id === draggingId
-            ? { ...i, isDragging: false, zIndex: newZIndex }
+            ? { ...i, isDragging: false, zIndex: newZIndex, anchorX: i.x, anchorY: i.y }
             : i
         ));
       }
