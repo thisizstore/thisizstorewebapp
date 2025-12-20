@@ -24,7 +24,7 @@ export function Tutorial() {
                   <iframe
                     width="100%"
                     height="100%"
-                    src="https://www.youtube.com/embed/dQw4w9WgXcQ"
+                    src="https://www.youtube.com/embed/Fyr37Y7JZ8s?si=WPqC9hq7sOnRy69o"
                     title="Tutorial Jasa Posting"
                     frameBorder="0"
                     allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
@@ -46,7 +46,7 @@ export function Tutorial() {
                   <iframe
                     width="100%"
                     height="100%"
-                    src="https://www.youtube.com/embed/dQw4w9WgXcQ"
+                    src="https://www.youtube.com/embed/gO6dCSo50Ho?si=wracE2MdNt1Crn61"
                     title="Tutorial Membeli Akun"
                     frameBorder="0"
                     allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
@@ -78,7 +78,7 @@ export function Tutorial() {
                   <iframe
                     width="100%"
                     height="100%"
-                    src="https://www.youtube.com/embed/dQw4w9WgXcQ"
+                    src="https://www.youtube.com/embed/yc1Wx31-pIU?si=ipx4aa4yTnUd6oFv"
                     title="Tutorial Jasa Cari"
                     frameBorder="0"
                     allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
@@ -100,7 +100,7 @@ export function Tutorial() {
                   <iframe
                     width="100%"
                     height="100%"
-                    src="https://www.youtube.com/embed/dQw4w9WgXcQ"
+                    src="https://www.youtube.com/embed/gO6dCSo50Ho?si=wracE2MdNt1Crn61"
                     title="Tutorial Menawarkan Akun"
                     frameBorder="0"
                     allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
